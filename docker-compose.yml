@@ -1,0 +1,15 @@
+version: '2.3'
+
+services:
+  prod:
+    command:
+      - simple-jetson-nano-detection-server
+      - --flagfile=data/flags-prod.txt
+    image: simple-jetson-nano-detection-server
+    init: true
+    restart: unless-stopped
+    volumes:
+      - prod-data:/app/data
+
+volumes:
+  prod-data:
