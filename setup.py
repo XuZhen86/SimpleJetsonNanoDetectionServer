@@ -9,7 +9,6 @@ setuptools.setup(
     python_requires='>=3.8.0',
     install_requires=[
         'absl-py==2.1.0',
-        'sixel==0.2.0',
     ],
     entry_points={
         'console_scripts': [
