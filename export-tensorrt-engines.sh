@@ -18,7 +18,6 @@ imgsz=320
 for model in yolo11n yolo11s yolo11m; do
   # It takes 6-7 mins for each export.
   yolo export model=pytorch/$model.pt format=engine half=true imgsz=$imgsz
-  yolo val task=detect model=pytorch/$model.engine  half=true imgsz=$imgsz data=/ultralytics/ultralytics/cfg/datasets/coco.yaml
 
   mv pytorch/$model.onnx   onnx/$model-$imgsz-fp16.onnx
   mv pytorch/$model.engine tensorrt/$model-$imgsz-fp16.engine
