@@ -9,6 +9,8 @@ setuptools.setup(
     python_requires='>=3.8.0',
     install_requires=[
         'absl-py==2.1.0',
+        'numpy==1.23.5',  # Required when running the model.
+        'onnxslim>=0.1.46',  # Required when exporting the model.
     ],
     entry_points={
         'console_scripts': [
