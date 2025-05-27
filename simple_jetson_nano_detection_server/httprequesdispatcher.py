@@ -25,7 +25,7 @@ class HttpRequestDispatcher(BaseHTTPRequestHandler):
       response = DetectionRequestHandler.get_response(request_body, multipart_boundary)
     except Exception as e:
       self.send_response_only(400)
-      self.send_header('Content-type', 'application/json')
+      self.send_header('Content-Type', 'application/json')
       self.end_headers()
       response = {
           'class': type(e).__name__,
@@ -36,7 +36,7 @@ class HttpRequestDispatcher(BaseHTTPRequestHandler):
       return
 
     self.send_response_only(200)
-    self.send_header('Content-type', 'application/json')
+    self.send_header('Content-Type', 'application/json')
     self.end_headers()
     self.wfile.write(response.encode())
 
