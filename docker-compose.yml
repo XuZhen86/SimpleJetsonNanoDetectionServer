@@ -1,16 +1,27 @@
 version: '2.3'
 
 services:
-  prod:
+  prod-detection-server:
     command:
       - simple-jetson-nano-detection-server
-      - --flagfile=data/flags-prod.txt
+      - --flagfile=data/flags/detection-server.txt
     image: simple-jetson-nano-detection-server
     init: true
     restart: unless-stopped
     volumes:
       - prod-data:/app/data
     network_mode: host
+
+  prod-metrics-uploader:
+    command:
+      - line-protocol-cache-uploader
+      - --flagfile=data/flags/metrics-uploader.txt
+    image: simple-jetson-nano-detection-server
+    init: true
+    mem_limit: 128M
+    restart: unless-stopped
+    volumes:
+      - prod-data:/app/data
 
 volumes:
   prod-data:

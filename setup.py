@@ -11,6 +11,7 @@ setuptools.setup(
         'absl-py==2.1.0',
         'numpy==1.23.5',  # Required when running the model.
         'onnxslim>=0.1.46',  # Required when exporting the model.
+        'line_protocol_cache@git+https://github.com/XuZhen86/LineProtocolCache@467f060',  # Specific commit for Python 3.8.
     ],
     entry_points={
         'console_scripts': [
