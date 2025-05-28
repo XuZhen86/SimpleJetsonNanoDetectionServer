@@ -2,6 +2,7 @@ from http.server import HTTPServer
 from typing import List
 
 from absl import app, flags
+from line_protocol_cache.lineprotocolcache import LineProtocolCache
 from ultralytics import YOLO
 
 from simple_jetson_nano_detection_server.httprequesdispatcher import HttpRequestDispatcher
@@ -27,16 +28,18 @@ SERVER_PORT = flags.DEFINE_integer(
 
 
 def main(args: List[str]) -> None:
-  # Load the engine file.
-  model = YOLO(ENGINE_PATH.value, task='detect')
-  YoloPredictor.set_model(model)
+  with LineProtocolCache():
 
-  # Do one prediction to load the engine into GPU.
-  with open("images/bus.jpg", 'rb') as fp:
-    YoloPredictor.predict(fp.read())
+    # Load the engine file.
+    model = YOLO(ENGINE_PATH.value, task='detect')
+    YoloPredictor.set_model(model)
 
-  http_server = HTTPServer((SERVER_IP.value, SERVER_PORT.value), HttpRequestDispatcher)
-  http_server.serve_forever()
+    # Do one prediction to load the engine into GPU.
+    with open("images/bus.jpg", 'rb') as fp:
+      YoloPredictor.predict(fp.read())
+
+    http_server = HTTPServer((SERVER_IP.value, SERVER_PORT.value), HttpRequestDispatcher)
+    http_server.serve_forever()
 
 
 def app_run_main() -> None:
