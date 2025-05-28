@@ -1,9 +1,20 @@
 import json
 import traceback
 from email.message import Message
+from enum import Enum, auto
 from http.server import BaseHTTPRequestHandler
 
+from line_protocol_cache.lineprotocolcache import LineProtocolCache
+
 from simple_jetson_nano_detection_server.detectionrequesthandler import DetectionRequestHandler
+from simple_jetson_nano_detection_server.performancetracker import PerformanceTracker
+
+
+class _PerformanceCheckpoint(Enum):
+  PARSE_REQUEST_BODY = auto()
+  PARSE_MULTIPART_BOUNDARY = auto()
+  COMPUTE_RESPONSE = auto()
+  SEND_RESPONSE = auto()
 
 
 class HttpRequestDispatcher(BaseHTTPRequestHandler):
@@ -19,26 +30,35 @@ class HttpRequestDispatcher(BaseHTTPRequestHandler):
       self.end_headers()
       return
 
+    tracker: PerformanceTracker[_PerformanceCheckpoint] = PerformanceTracker()
+
     try:
-      request_body = self._get_post_request_body()
-      multipart_boundary = self._get_post_multipart_boundary()
-      response = DetectionRequestHandler.get_response(request_body, multipart_boundary)
+      with tracker(_PerformanceCheckpoint.PARSE_REQUEST_BODY):
+        request_body = self._get_post_request_body()
+      with tracker(_PerformanceCheckpoint.PARSE_MULTIPART_BOUNDARY):
+        multipart_boundary = self._get_post_multipart_boundary()
+      with tracker(_PerformanceCheckpoint.COMPUTE_RESPONSE):
+        response = DetectionRequestHandler.get_response(request_body, multipart_boundary)
     except Exception as e:
-      self.send_response_only(400)
-      self.send_header('Content-Type', 'application/json')
-      self.end_headers()
-      response = {
-          'class': type(e).__name__,
-          'message': str(e),
-          'traceback': traceback.format_tb(e.__traceback__),
-      }
-      self.wfile.write(json.dumps(response).encode())
+      with tracker(_PerformanceCheckpoint.SEND_RESPONSE):
+        self.send_response_only(400)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        response = {
+            'class': type(e).__name__,
+            'message': str(e),
+            'traceback': traceback.format_tb(e.__traceback__),
+        }
+        self.wfile.write(json.dumps(response).encode())
+      LineProtocolCache.put(tracker.finalize('http_request_dispatcher', {'response_code': 400}))
       return
 
-    self.send_response_only(200)
-    self.send_header('Content-Type', 'application/json')
-    self.end_headers()
-    self.wfile.write(response.encode())
+    with tracker(_PerformanceCheckpoint.SEND_RESPONSE):
+      self.send_response_only(200)
+      self.send_header('Content-Type', 'application/json')
+      self.end_headers()
+      self.wfile.write(response.encode())
+    LineProtocolCache.put(tracker.finalize('http_request_dispatcher', {'response_code': 200}))
 
   def _get_post_request_body(self) -> bytes:
     content_length = int(self.headers['Content-Length'])
