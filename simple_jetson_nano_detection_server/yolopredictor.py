@@ -37,7 +37,11 @@ class YoloPredictor:
     with NamedTemporaryFile(dir='/dev/shm', suffix='.jpg') as image_file:
       image_file.write(image_data)
       image_file.flush()
-      results = cls._model.predict(image_file.name, imgsz=_IMAGE_SIZE.value, half=_HALF_PRECISION.value, save=False)
+      results = cls._model.predict(image_file.name,
+                                   imgsz=_IMAGE_SIZE.value,
+                                   half=_HALF_PRECISION.value,
+                                   save=False,
+                                   verbose=False)
 
     assert len(results) == 1, f'There must be exactly 1 result, got {len(results)} instead'
     result = results[0]
