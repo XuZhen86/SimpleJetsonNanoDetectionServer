@@ -1,5 +1,6 @@
 from http.server import HTTPServer
 from typing import List
+from unittest.mock import Mock, patch
 
 from absl import app, flags
 from line_protocol_cache.lineprotocolcache import LineProtocolCache
@@ -34,9 +35,10 @@ def main(args: List[str]) -> None:
     model = YOLO(ENGINE_PATH.value, task='detect')
     YoloPredictor.set_model(model)
 
-    # Do one prediction to load the engine into GPU.
+    # Do one prediction to load the engine into GPU while generate no metrics.
     with open("images/bus.jpg", 'rb') as fp:
-      YoloPredictor.predict(fp.read())
+      with patch.object(LineProtocolCache, LineProtocolCache.put.__name__, Mock(return_value=None)):
+        YoloPredictor.predict(fp.read())
 
     http_server = HTTPServer((SERVER_IP.value, SERVER_PORT.value), HttpRequestDispatcher)
     http_server.serve_forever()
