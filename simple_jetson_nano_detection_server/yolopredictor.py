@@ -167,6 +167,9 @@ class YoloPredictor:
 
   @classmethod
   def _record_coco_categories(cls, predictions: List[Prediction]) -> None:
+    if len(predictions) == 0:
+      return
+
     tracker: EventMetricsTracker[_CocoCategories] = EventMetricsTracker()
     for prediction in predictions:
       tracker.increment(_CocoCategories(prediction.label))

@@ -115,3 +115,23 @@ class TestYoloPredictor(parameterized.TestCase):
 
     call_args = self.mock_yolo_predict.call_args
     self.assertContainsSubset({'imgsz': 12345, 'half': False}, call_args.kwargs)
+
+  def test_noPredictions_skipsPredictionOutputMetrics(self):
+    mock_xyxy = Mock(tolist=Mock(return_value=[]))
+    mock_conf = Mock(tolist=Mock(return_value=[]))
+    mock_cls = Mock(tolist=Mock(return_value=[]))
+    mock_boxes = Mock(xyxy=mock_xyxy, conf=mock_conf, cls=mock_cls)
+    mock_result = Mock(boxes=mock_boxes)
+    mock_results = [mock_result]
+    self.mock_yolo_predict = Mock(return_value=mock_results)
+    self.mock_yolo = Mock(predict=self.mock_yolo_predict, names={1: 'person', 2: 'bicycle', 3: 'car'})
+    YoloPredictor.set_model(self.mock_yolo)
+
+    YoloPredictor.predict(b'image-bytes')
+
+    self.assertEqual(
+        [call_arg.args[0].to_line_protocol() for call_arg in LINE_PROTOCOL_CACHE_PUT.call_args_list],
+        [
+            'prediction_input image_bytes=11i 1700000000000000000',
+        ],
+    )
