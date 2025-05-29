@@ -15,6 +15,9 @@ class EventMetricsTracker(Generic[EventMetricsFields]):
   def record(self, field: EventMetricsFields, value: int) -> None:
     self._values[field] = value
 
+  def increment(self, field: EventMetricsFields, amount: int = 1) -> None:
+    self._values[field] = self._values.get(field, 0) + amount
+
   def finalize(self, measurement: str, tags: Dict[str, Union[str, int]] = {}) -> Point:
     assert len(self._values) > 0, 'Nothing to finalize'
 
