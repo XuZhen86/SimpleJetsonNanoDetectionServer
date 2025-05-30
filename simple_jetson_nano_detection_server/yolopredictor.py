@@ -172,7 +172,8 @@ class YoloPredictor:
 
     tracker: EventMetricsTracker[_CocoCategories] = EventMetricsTracker()
     for prediction in predictions:
-      tracker.increment(_CocoCategories(prediction.label))
+      tracker.increment(_CocoCategories(prediction.label), 1, {'confidence_percent': int(prediction.confidence * 100)})
+
     LineProtocolCache.put(
         tracker.finalize('prediction_output', {
             'model_image_size': _IMAGE_SIZE.value,

@@ -1,4 +1,6 @@
 import time
+from itertools import chain
+from typing import List
 from unittest.mock import Mock, patch
 
 from absl.testing import flagsaver, parameterized
@@ -26,16 +28,19 @@ class TestYoloPredictor(parameterized.TestCase):
         [264.25, 173.40625, 319.75, 179.09375],
         [111.5, 164.5625, 319.5, 319.4375],
         [111.5, 164.5625, 319.5, 319.4375],
+        [111.5, 164.5625, 319.5, 319.4375],
     ]))
     mock_conf = Mock(tolist=Mock(return_value=[
         0.6460136771202087,
         0.42441198229789734,
         0.29746994376182556,
         0.29746994376182556,
+        0.40346994376182556,
     ]))
     mock_cls = Mock(tolist=Mock(return_value=[
         1.0,
         2.0,
+        3.0,
         3.0,
         3.0,
     ]))
@@ -56,6 +61,11 @@ class TestYoloPredictor(parameterized.TestCase):
     self.saved_flags.__exit__(None, None, None)
     return super().tearDown()
 
+  def _assert_line_protocols(self, expected: List[str]) -> None:
+    points = chain.from_iterable([call_arg.args[0] for call_arg in LINE_PROTOCOL_CACHE_PUT.call_args_list])
+    line_protocols = [p.to_line_protocol() for p in points]
+    self.assertListEqual(line_protocols, expected)
+
   def test_noModel_raises(self):
     YoloPredictor._model = None
 
@@ -68,30 +78,30 @@ class TestYoloPredictor(parameterized.TestCase):
 
     with self.assertRaisesWithLiteralMatch(Exception, 'There must be exactly 1 result, got 0 instead'):
       YoloPredictor.predict(b'image-bytes')
-    self.assertEqual(
-        [call_arg.args[0].to_line_protocol() for call_arg in LINE_PROTOCOL_CACHE_PUT.call_args_list],
-        ['prediction_input image_bytes=11i 1700000000000000000'],
-    )
+
+    self._assert_line_protocols([
+        'prediction_input image_bytes=11i 1700000000000000000',
+    ])
 
   def test_moreThan1Results_raises(self):
     self.mock_yolo_predict.return_value = [Mock(), Mock()]
 
     with self.assertRaisesWithLiteralMatch(Exception, 'There must be exactly 1 result, got 2 instead'):
       YoloPredictor.predict(b'image-bytes')
-    self.assertEqual(
-        [call_arg.args[0].to_line_protocol() for call_arg in LINE_PROTOCOL_CACHE_PUT.call_args_list],
-        ['prediction_input image_bytes=11i 1700000000000000000'],
-    )
+
+    self._assert_line_protocols([
+        'prediction_input image_bytes=11i 1700000000000000000',
+    ])
 
   def test_boxesIsNone_raises(self):
     self.mock_yolo_predict.return_value = [Mock(boxes=None)]
 
     with self.assertRaisesWithLiteralMatch(Exception, 'Boxes cannot be None'):
       YoloPredictor.predict(b'image-bytes')
-    self.assertEqual(
-        [call_arg.args[0].to_line_protocol() for call_arg in LINE_PROTOCOL_CACHE_PUT.call_args_list],
-        ['prediction_input image_bytes=11i 1700000000000000000'],
-    )
+
+    self._assert_line_protocols([
+        'prediction_input image_bytes=11i 1700000000000000000',
+    ])
 
   def test_convertsToPredictions(self):
     predictions = YoloPredictor.predict(b'image-bytes')
@@ -101,14 +111,15 @@ class TestYoloPredictor(parameterized.TestCase):
         Prediction(x_min=264, x_max=319, y_min=173, y_max=179, label='bicycle', confidence=0.42441198229789734),
         Prediction(x_min=111, x_max=319, y_min=164, y_max=319, label='car', confidence=0.29746994376182556),
         Prediction(x_min=111, x_max=319, y_min=164, y_max=319, label='car', confidence=0.29746994376182556),
+        Prediction(x_min=111, x_max=319, y_min=164, y_max=319, label='car', confidence=0.40346994376182556),
     ])
-    self.assertEqual(
-        [call_arg.args[0].to_line_protocol() for call_arg in LINE_PROTOCOL_CACHE_PUT.call_args_list],
-        [
-            'prediction_input image_bytes=11i 1700000000000000000',
-            'prediction_output,model_image_size=12345,model_precision=fp32 bicycle=1i,car=2i,person=1i 1700000000000000000'
-        ],
-    )
+    self._assert_line_protocols([
+        'prediction_input image_bytes=11i 1700000000000000000',
+        'prediction_output,confidence_percent=64,model_image_size=12345,model_precision=fp32 person=1i 1700000000000000000',
+        'prediction_output,confidence_percent=42,model_image_size=12345,model_precision=fp32 bicycle=1i 1700000000000000000',
+        'prediction_output,confidence_percent=29,model_image_size=12345,model_precision=fp32 car=2i 1700000000000000000',
+        'prediction_output,confidence_percent=40,model_image_size=12345,model_precision=fp32 car=1i 1700000000000000000',
+    ])
 
   def test_callsModelWithFlagValues(self):
     YoloPredictor.predict(b'image-bytes')
@@ -129,9 +140,6 @@ class TestYoloPredictor(parameterized.TestCase):
 
     YoloPredictor.predict(b'image-bytes')
 
-    self.assertEqual(
-        [call_arg.args[0].to_line_protocol() for call_arg in LINE_PROTOCOL_CACHE_PUT.call_args_list],
-        [
-            'prediction_input image_bytes=11i 1700000000000000000',
-        ],
-    )
+    self._assert_line_protocols([
+        'prediction_input image_bytes=11i 1700000000000000000',
+    ])
