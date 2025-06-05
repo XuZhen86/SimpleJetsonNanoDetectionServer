@@ -1,5 +1,14 @@
 from email.message import Message
 
+from absl import flags
+
+_MAX_IMAGE_DATA_BYTES = flags.DEFINE_integer(
+    name='max_image_data_bytes',
+    default=64 * 1024,  # The observed image size goes up to 32KiB.
+    lower_bound=0,
+    help='Maximum image size in bytes that is allowed. The value is inclusive',
+)
+
 
 class ImageDataExtractor:
 
@@ -28,6 +37,10 @@ class ImageDataExtractor:
       if content_disposition != [('form-data', ''), ('name', 'image'), ('filename', 'image')]:
         continue
 
-      return part[end_index + len(b'\r\n\r\n'):-len(b'\r\n')]
+      image_data = part[end_index + len(b'\r\n\r\n'):-len(b'\r\n')]
+      assert len(image_data) <= _MAX_IMAGE_DATA_BYTES.value, (f'Image size of {len(image_data)} bytes is too big, '
+                                                              f'must be <= {_MAX_IMAGE_DATA_BYTES.value} bytes')
+
+      return image_data
 
     raise ValueError('No image data was found')
