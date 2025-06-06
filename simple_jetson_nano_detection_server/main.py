@@ -1,3 +1,4 @@
+from contextlib import nullcontext
 from http.server import HTTPServer
 from typing import List
 from unittest.mock import Mock, patch
@@ -27,6 +28,18 @@ SERVER_PORT = flags.DEFINE_integer(
     help='The port to bind the HTTP server to',
 )
 
+GENERATE_METRICS = flags.DEFINE_bool(
+    name='generate_metrics',
+    default=False,
+    help='Generate InfluxDB data points when processing the requests',
+)
+
+
+def _inhibit_lpc(for_real: bool = True):
+  if for_real:
+    return patch.object(LineProtocolCache, LineProtocolCache.put.__name__, Mock(return_value=None))
+  return nullcontext()
+
 
 def main(args: List[str]) -> None:
   with LineProtocolCache():
@@ -36,12 +49,12 @@ def main(args: List[str]) -> None:
     YoloPredictor.set_model(model)
 
     # Do one prediction to load the engine into GPU while generate no metrics.
-    with open("images/bus.jpg", 'rb') as fp:
-      with patch.object(LineProtocolCache, LineProtocolCache.put.__name__, Mock(return_value=None)):
-        YoloPredictor.predict(fp.read())
+    with open("images/bus.jpg", 'rb') as fp, _inhibit_lpc():
+      YoloPredictor.predict(fp.read())
 
-    http_server = HTTPServer((SERVER_IP.value, SERVER_PORT.value), HttpRequestDispatcher)
-    http_server.serve_forever()
+    with _inhibit_lpc(not GENERATE_METRICS.value):
+      http_server = HTTPServer((SERVER_IP.value, SERVER_PORT.value), HttpRequestDispatcher)
+      http_server.serve_forever()
 
 
 def app_run_main() -> None:
