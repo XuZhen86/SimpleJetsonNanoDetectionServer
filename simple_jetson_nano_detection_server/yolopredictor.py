@@ -122,7 +122,7 @@ class YoloPredictor:
 
   @classmethod
   def predict(cls, image_data: bytes) -> List[Prediction]:
-    assert cls._model is not None, 'A model must be set before prediciton'
+    assert cls._model is not None, 'A model must be set before prediction'
 
     cls._record_image_size(image_data)
     with NamedTemporaryFile(dir='/dev/shm', suffix='.jpg') as image_file:

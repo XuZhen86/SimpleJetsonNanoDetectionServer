@@ -3,7 +3,7 @@ from http.server import HTTPServer
 from typing import List
 from unittest.mock import Mock, patch
 
-from absl import app, flags
+from absl import app, flags, logging
 from line_protocol_cache.lineprotocolcache import LineProtocolCache
 from ultralytics import YOLO
 
@@ -45,13 +45,16 @@ def main(args: List[str]) -> None:
   with LineProtocolCache():
 
     # Load the engine file.
+    logging.info(f'Loading engine file from {ENGINE_PATH.value}.')
     model = YOLO(ENGINE_PATH.value, task='detect')
     YoloPredictor.set_model(model)
 
     # Do one prediction to load the engine into GPU while generate no metrics.
-    with open("images/bus.jpg", 'rb') as fp, _inhibit_lpc():
+    logging.info('Running prediction on images/bus.jpg.')
+    with open('images/bus.jpg', 'rb') as fp, _inhibit_lpc():
       YoloPredictor.predict(fp.read())
 
+    logging.info('Starting HTTP server.')
     with _inhibit_lpc(not GENERATE_METRICS.value):
       http_server = HTTPServer((SERVER_IP.value, SERVER_PORT.value), HttpRequestDispatcher)
       http_server.serve_forever()
