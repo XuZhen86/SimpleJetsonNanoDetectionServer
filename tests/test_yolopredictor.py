@@ -69,7 +69,7 @@ class TestYoloPredictor(parameterized.TestCase):
   def test_noModel_raises(self):
     YoloPredictor._model = None
 
-    with self.assertRaisesWithLiteralMatch(Exception, 'A model must be set before prediciton'):
+    with self.assertRaisesWithLiteralMatch(Exception, 'A model must be set before prediction'):
       YoloPredictor.predict(b'image-bytes')
     LINE_PROTOCOL_CACHE_PUT.assert_not_called()
 

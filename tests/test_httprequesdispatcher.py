@@ -7,12 +7,12 @@ from typing import Any, Tuple
 from unittest.mock import Mock, patch
 
 import requests
-from absl.testing import parameterized
+from absl.testing import flagsaver, parameterized
 from influxdb_client.client.write.point import Point
 from line_protocol_cache.lineprotocolcache import LineProtocolCache
 
 from simple_jetson_nano_detection_server.detectionrequesthandler import DetectionRequestHandler
-from simple_jetson_nano_detection_server.httprequesdispatcher import HttpRequestDispatcher
+from simple_jetson_nano_detection_server.httprequesdispatcher import _MAX_CONTENT_LENGTH, HttpRequestDispatcher
 
 
 class TestHttpRequestDispatcher(parameterized.TestCase):
@@ -20,6 +20,9 @@ class TestHttpRequestDispatcher(parameterized.TestCase):
   SERVER_PORT = 42069
 
   def setUp(self):
+    self.saved_flags = flagsaver.as_parsed((_MAX_CONTENT_LENGTH, str(10)))
+    self.saved_flags.__enter__()
+
     self.manager = Manager()
     self.call_args = self.manager.Queue()
     self.line_protocol_cache: Queue[Point] = self.manager.Queue()
@@ -66,6 +69,8 @@ class TestHttpRequestDispatcher(parameterized.TestCase):
     self.server_process.terminate()
     self.server_process.join(timeout=5)
     assert self.server_process.exitcode is not None, 'Failed to terminate server process'
+
+    self.saved_flags.__exit__(None, None, None)
     return super().tearDown()
 
   def test_invalidPath_returns404(self):
@@ -146,5 +151,20 @@ class TestHttpRequestDispatcher(parameterized.TestCase):
     self.assertEqual(
         self.line_protocol_cache.get().to_line_protocol(),
         'http_request_dispatcher,response_code=200 compute_response_ns=190i,parse_multipart_boundary_ns=320i,parse_request_body_ns=27i,send_response_ns=3200i 1700000000000000000',
+    )
+    self.assertTrue(self.line_protocol_cache.empty())
+
+  def test_contentLengthTooLong_raises(self):
+    r = requests.post(
+        f'http://{self.SERVER_IP}:{self.SERVER_PORT}/v1/vision/detection',
+        headers={'Content-Type': 'multipart/form-data; boundary=241a860e9a94d2780e8e67095c27a662'},
+        data=b'---very long content---',
+    )
+
+    self.assertEqual(r.status_code, 400)
+    self.assertContainsSubset({'message': 'Expected Content-Length to be <= 10, got 23 instead'}, r.json())
+    self.assertEqual(
+        self.line_protocol_cache.get().to_line_protocol(),
+        'http_request_dispatcher,response_code=400 parse_request_body_ns=27i,send_response_ns=320i 1700000000000000000',
     )
     self.assertTrue(self.line_protocol_cache.empty())

@@ -4,10 +4,18 @@ from email.message import Message
 from enum import Enum, auto
 from http.server import BaseHTTPRequestHandler
 
+from absl import flags
 from line_protocol_cache.lineprotocolcache import LineProtocolCache
 
 from simple_jetson_nano_detection_server.detectionrequesthandler import DetectionRequestHandler
 from simple_jetson_nano_detection_server.performancetracker import PerformanceTracker
+
+_MAX_CONTENT_LENGTH = flags.DEFINE_integer(
+    name='max_content_length',
+    default=128 * 1024,  # 128KiB.
+    lower_bound=0,
+    help='Maximum HTTP Content-Length value that is allowed. The value is inclusive',
+)
 
 
 class _PerformanceCheckpoint(Enum):
@@ -63,6 +71,8 @@ class HttpRequestDispatcher(BaseHTTPRequestHandler):
   def _get_post_request_body(self) -> bytes:
     content_length = int(self.headers['Content-Length'])
     assert content_length > 0, 'Expected Content-Length to be > 0'
+    assert content_length <= _MAX_CONTENT_LENGTH.value, (
+        f'Expected Content-Length to be <= {_MAX_CONTENT_LENGTH.value}, got {content_length} instead')
 
     request_body = self.rfile.read(content_length)  # Could block forever until sufficient bytes were read.
     return request_body
@@ -77,7 +87,8 @@ class HttpRequestDispatcher(BaseHTTPRequestHandler):
     assert content_type != None
 
     mime_type = content_type[0][0]
-    assert mime_type == 'multipart/form-data', f'Expected mime type to be "multipart/form-data", got "{mime_type}" instead'
+    assert mime_type == 'multipart/form-data', (
+        f'Expected mime type to be "multipart/form-data", got "{mime_type}" instead')
 
     params = {p: v for p, v in content_type[1:]}
     assert 'boundary' in params, 'Missing "boundary" in Content-Type'
