@@ -3,7 +3,7 @@ from contextlib import ExitStack
 from http.server import HTTPServer
 from multiprocessing import Manager, Process
 from queue import Queue
-from typing import Any, Tuple
+from typing import Any, Dict, Tuple
 from unittest.mock import Mock, patch
 
 import requests
@@ -73,6 +73,9 @@ class TestHttpRequestDispatcher(parameterized.TestCase):
     self.saved_flags.__exit__(None, None, None)
     return super().tearDown()
 
+  def _assertDictContainsSubset(self, subset: Dict[Any, Any], dictionary: Dict[Any, Any], msg: object = None) -> None:
+    self.assertEqual(dictionary, {**dictionary, **subset}, msg)
+
   def test_invalidPath_returns404(self):
     r = requests.post(f'http://{self.SERVER_IP}:{self.SERVER_PORT}/invalid-path')
 
@@ -86,7 +89,7 @@ class TestHttpRequestDispatcher(parameterized.TestCase):
     )
 
     self.assertEqual(r.status_code, 400)
-    self.assertContainsSubset({'message': 'Expected Content-Length to be > 0'}, r.json())
+    self._assertDictContainsSubset({'message': 'Expected Content-Length to be > 0'}, r.json())
     self.assertEqual(
         self.line_protocol_cache.get().to_line_protocol(),
         'http_request_dispatcher,response_code=400 parse_request_body_ns=27i,send_response_ns=320i 1700000000000000000',
@@ -101,7 +104,7 @@ class TestHttpRequestDispatcher(parameterized.TestCase):
     )
 
     self.assertEqual(r.status_code, 400)
-    self.assertContainsSubset({'message': 'Missing Content-Type'}, r.json())
+    self._assertDictContainsSubset({'message': 'Missing Content-Type'}, r.json())
     self.assertEqual(
         self.line_protocol_cache.get().to_line_protocol(),
         'http_request_dispatcher,response_code=400 parse_multipart_boundary_ns=320i,parse_request_body_ns=27i,send_response_ns=190i 1700000000000000000',
@@ -116,7 +119,7 @@ class TestHttpRequestDispatcher(parameterized.TestCase):
     )
 
     self.assertEqual(r.status_code, 400)
-    self.assertContainsSubset(
+    self._assertDictContainsSubset(
         {'message': 'Expected mime type to be "multipart/form-data", got "invalid/mime-type" instead'}, r.json())
     self.assertEqual(
         self.line_protocol_cache.get().to_line_protocol(),
@@ -132,7 +135,7 @@ class TestHttpRequestDispatcher(parameterized.TestCase):
     )
 
     self.assertEqual(r.status_code, 400)
-    self.assertContainsSubset({'message': 'Missing "boundary" in Content-Type'}, r.json())
+    self._assertDictContainsSubset({'message': 'Missing "boundary" in Content-Type'}, r.json())
     self.assertEqual(
         self.line_protocol_cache.get().to_line_protocol(),
         'http_request_dispatcher,response_code=400 parse_multipart_boundary_ns=320i,parse_request_body_ns=27i,send_response_ns=190i 1700000000000000000',
@@ -162,7 +165,7 @@ class TestHttpRequestDispatcher(parameterized.TestCase):
     )
 
     self.assertEqual(r.status_code, 400)
-    self.assertContainsSubset({'message': 'Expected Content-Length to be <= 10, got 23 instead'}, r.json())
+    self._assertDictContainsSubset({'message': 'Expected Content-Length to be <= 10, got 23 instead'}, r.json())
     self.assertEqual(
         self.line_protocol_cache.get().to_line_protocol(),
         'http_request_dispatcher,response_code=400 parse_request_body_ns=27i,send_response_ns=320i 1700000000000000000',

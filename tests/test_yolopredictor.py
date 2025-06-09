@@ -1,6 +1,6 @@
 import time
 from itertools import chain
-from typing import List
+from typing import Any, Dict, List
 from unittest.mock import Mock, patch
 
 from absl.testing import flagsaver, parameterized
@@ -66,6 +66,9 @@ class TestYoloPredictor(parameterized.TestCase):
     line_protocols = [p.to_line_protocol() for p in points]
     self.assertListEqual(line_protocols, expected)
 
+  def _assertDictContainsSubset(self, subset: Dict[Any, Any], dictionary: Dict[Any, Any], msg: object = None) -> None:
+    self.assertEqual(dictionary, {**dictionary, **subset}, msg)
+
   def test_noModel_raises(self):
     YoloPredictor._model = None
 
@@ -125,7 +128,7 @@ class TestYoloPredictor(parameterized.TestCase):
     YoloPredictor.predict(b'image-bytes')
 
     call_args = self.mock_yolo_predict.call_args
-    self.assertContainsSubset({'imgsz': 12345, 'half': False}, call_args.kwargs)
+    self._assertDictContainsSubset({'imgsz': 12345, 'half': False}, call_args.kwargs)
 
   def test_noPredictions_skipsPredictionOutputMetrics(self):
     mock_xyxy = Mock(tolist=Mock(return_value=[]))
