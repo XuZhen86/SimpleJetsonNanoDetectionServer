@@ -20,9 +20,8 @@ class TestPrediction(parameterized.TestCase):
       (0, 0, 1, 0, 'car', 0.5),
   )
   def test_invalidValues(self, x_min: int, x_max: int, y_min: int, y_max: int, label: str, confidence: float):
-    with self.assertRaises(Exception) as e:
+    with self.assertRaises(Exception):
       Prediction.build(x_min, x_max, y_min, y_max, label, confidence)
-    print(e.exception)
 
   @parameterized.parameters(
       (0, 0, 0, 0, 'car', 0.5),
