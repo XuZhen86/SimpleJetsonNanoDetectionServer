@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 from absl.testing import flagsaver, parameterized
 from line_protocol_cache.lineprotocolcache import LineProtocolCache
 
+from simple_jetson_nano_detection_server.cocolabel import CocoLabel
 from simple_jetson_nano_detection_server.prediction import Prediction
 from simple_jetson_nano_detection_server.yolopredictor import _HALF_PRECISION, _IMAGE_SIZE, YoloPredictor
 
@@ -110,11 +111,11 @@ class TestYoloPredictor(parameterized.TestCase):
     predictions = YoloPredictor.predict(b'image-bytes')
 
     self.assertEqual(predictions, [
-        Prediction(x_min=132, x_max=177, y_min=104, y_max=141, label='person', confidence=0.6460136771202087),
-        Prediction(x_min=264, x_max=319, y_min=173, y_max=179, label='bicycle', confidence=0.42441198229789734),
-        Prediction(x_min=111, x_max=319, y_min=164, y_max=319, label='car', confidence=0.29746994376182556),
-        Prediction(x_min=111, x_max=319, y_min=164, y_max=319, label='car', confidence=0.29746994376182556),
-        Prediction(x_min=111, x_max=319, y_min=164, y_max=319, label='car', confidence=0.40346994376182556),
+        Prediction.build(x_min=132, x_max=177, y_min=104, y_max=141, label='person', confidence=0.6460136771202087),
+        Prediction.build(x_min=264, x_max=319, y_min=173, y_max=179, label='bicycle', confidence=0.42441198229789734),
+        Prediction.build(x_min=111, x_max=319, y_min=164, y_max=319, label='car', confidence=0.29746994376182556),
+        Prediction.build(x_min=111, x_max=319, y_min=164, y_max=319, label='car', confidence=0.29746994376182556),
+        Prediction.build(x_min=111, x_max=319, y_min=164, y_max=319, label='car', confidence=0.40346994376182556),
     ])
     self._assert_line_protocols([
         'prediction_input image_bytes=11i 1700000000000000000',

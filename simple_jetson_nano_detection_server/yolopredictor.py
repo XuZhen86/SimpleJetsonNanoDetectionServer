@@ -6,6 +6,7 @@ import ultralytics
 from absl import flags
 from line_protocol_cache.lineprotocolcache import LineProtocolCache
 
+from simple_jetson_nano_detection_server.cocolabel import CocoLabel
 from simple_jetson_nano_detection_server.eventmetricstracker import EventMetricsTracker
 from simple_jetson_nano_detection_server.prediction import Prediction
 
@@ -27,89 +28,6 @@ _HALF_PRECISION = flags.DEFINE_bool(
 
 class _EventMetricsFields(Enum):
   IMAGE_BYTES = auto()
-
-
-class _CocoCategories(Enum):
-  PERSON = 'person'
-  BICYCLE = 'bicycle'
-  CAR = 'car'
-  MOTORCYCLE = 'motorcycle'
-  AIRPLANE = 'airplane'
-  BUS = 'bus'
-  TRAIN = 'train'
-  TRUCK = 'truck'
-  BOAT = 'boat'
-  TRAFFIC_LIGHT = 'traffic light'
-  FIRE_HYDRANT = 'fire hydrant'
-  STOP_SIGN = 'stop sign'
-  PARKING_METER = 'parking meter'
-  BENCH = 'bench'
-  BIRD = 'bird'
-  CAT = 'cat'
-  DOG = 'dog'
-  HORSE = 'horse'
-  SHEEP = 'sheep'
-  COW = 'cow'
-  ELEPHANT = 'elephant'
-  BEAR = 'bear'
-  ZEBRA = 'zebra'
-  GIRAFFE = 'giraffe'
-  BACKPACK = 'backpack'
-  UMBRELLA = 'umbrella'
-  HANDBAG = 'handbag'
-  TIE = 'tie'
-  SUITCASE = 'suitcase'
-  FRISBEE = 'frisbee'
-  SKIS = 'skis'
-  SNOWBOARD = 'snowboard'
-  SPORTS_BALL = 'sports ball'
-  KITE = 'kite'
-  BASEBALL_BAT = 'baseball bat'
-  BASEBALL_GLOVE = 'baseball glove'
-  SKATEBOARD = 'skateboard'
-  SURFBOARD = 'surfboard'
-  TENNIS_RACKET = 'tennis racket'
-  BOTTLE = 'bottle'
-  WINE_GLASS = 'wine glass'
-  CUP = 'cup'
-  FORK = 'fork'
-  KNIFE = 'knife'
-  SPOON = 'spoon'
-  BOWL = 'bowl'
-  BANANA = 'banana'
-  APPLE = 'apple'
-  SANDWICH = 'sandwich'
-  ORANGE = 'orange'
-  BROCCOLI = 'broccoli'
-  CARROT = 'carrot'
-  HOT_DOG = 'hot dog'
-  PIZZA = 'pizza'
-  DONUT = 'donut'
-  CAKE = 'cake'
-  CHAIR = 'chair'
-  COUCH = 'couch'
-  POTTED_PLANT = 'potted plant'
-  BED = 'bed'
-  DINING_TABLE = 'dining table'
-  TOILET = 'toilet'
-  TV = 'tv'
-  LAPTOP = 'laptop'
-  MOUSE = 'mouse'
-  REMOTE = 'remote'
-  KEYBOARD = 'keyboard'
-  CELL_PHONE = 'cell phone'
-  MICROWAVE = 'microwave'
-  OVEN = 'oven'
-  TOASTER = 'toaster'
-  SINK = 'sink'
-  REFRIGERATOR = 'refrigerator'
-  BOOK = 'book'
-  CLOCK = 'clock'
-  VASE = 'vase'
-  SCISSORS = 'scissors'
-  TEDDY_BEAR = 'teddy bear'
-  HAIR_DRIER = 'hair drier'
-  TOOTHBRUSH = 'toothbrush'
 
 
 class YoloPredictor:
@@ -147,7 +65,7 @@ class YoloPredictor:
     predictions: List[Prediction] = []
     for xyxy_coordinate, confidence, class_id in zipped:
       predictions.append(
-          Prediction(
+          Prediction.build(
               x_min=int(xyxy_coordinate[0]),
               y_min=int(xyxy_coordinate[1]),
               x_max=int(xyxy_coordinate[2]),
@@ -170,9 +88,9 @@ class YoloPredictor:
     if len(predictions) == 0:
       return
 
-    tracker: EventMetricsTracker[_CocoCategories] = EventMetricsTracker()
+    tracker: EventMetricsTracker[CocoLabel] = EventMetricsTracker()
     for prediction in predictions:
-      tracker.increment(_CocoCategories(prediction.label), 1, {'confidence_percent': int(prediction.confidence * 100)})
+      tracker.increment(prediction.label, 1, {'confidence_percent': int(prediction.confidence * 100)})
 
     LineProtocolCache.put(
         tracker.finalize('prediction_output', {
